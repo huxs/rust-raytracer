@@ -24,7 +24,29 @@
                 "--release",
                 "--",
                 "--emit",
-                "asm"
+                "asm",
+                "-C",
+                "llvm-args=-x86-asm-syntax=intel",
+                "-C",
+                "opt-level=2",
+                "-C",
+                "debuginfo=0"
+            ],
+            "problemMatcher": [
+                "$rustc"
+            ]
+        },
+        {
+            "type": "shell",
+            "label": "cargo asm",
+            "command": "cargo",
+            "args": [
+                "asm",
+                "raytracer::trace",
+                "--rust",
+                "--no-color",
+                ">",
+                "output.s"
             ],
             "problemMatcher": [
                 "$rustc"
