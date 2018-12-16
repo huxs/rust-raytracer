@@ -14,6 +14,7 @@ use crate::math::Ray;
 mod hitable;
 use crate::hitable::Hitable;
 use crate::hitable::HitableList;
+use crate::hitable::HitableKind;
 
 mod sphere;
 use crate::sphere::Sphere;
@@ -26,13 +27,15 @@ use crate::material::Lambertian;
 use crate::material::Metal;
 use crate::material::Dielectric;
 
+use crate::material::MaterialKind;
+
 mod random;
 
 fn main() {
 
     let window_width = 800;
     let window_height = 600;
-    let samples_per_pixel = 200;
+    let samples_per_pixel = 100;
     let realtime = false;
 
     let sdl_context = sdl2::init()
@@ -74,17 +77,26 @@ fn main() {
             canvas.clear();
 
             let aspect_ratio = width as f32 / height as f32;
-            let camera_pos = Vec3::new(8.0, 1.5, 2.0);
+            //let camera_pos = Vec3::new(90.0, 1.5, 2.0);
+            let camera_pos = Vec3::new(0.0, 0.0, 2.0);
             let camera_target= Vec3::new(0.0, 0.0, -1.0);
             let _focus_distance = (camera_pos-camera_target).length();
             let camera = Camera::new(camera_pos, camera_target, Vec3::new(0.0, 1.0, 0.0), 45.0, aspect_ratio, 0.05, 5.0);
 
-           let mut list = HitableList{ hitables: Vec::new() };
-           list.hitables.push(Box::new(Sphere::new(Vec3{x:0.0, y:0.0, z:-1.0}, 0.5, Box::new(Lambertian{albedo:Vec3{x:0.1, y:0.2, z:0.5}}))));
-           list.hitables.push(Box::new(Sphere::new(Vec3{x:0.0, y:-100.5, z:-1.0}, 100.0, Box::new(Lambertian{albedo:Vec3{x:0.8, y:0.8, z:0.0}}))));
-           list.hitables.push(Box::new(Sphere::new(Vec3{x:1.0, y:0.0, z:-1.0}, 0.5, Box::new(Metal{albedo:Vec3{x:0.8, y:0.6, z:0.2}, fuzz:0.0}))));
-           list.hitables.push(Box::new(Sphere::new(Vec3{x:-1.0, y:0.0, z:-1.0}, 0.5, Box::new(Dielectric{ref_idx:1.5}))));
-           list.hitables.push(Box::new(Sphere::new(Vec3{x:-1.0, y:0.0, z:-1.0}, -0.45, Box::new(Dielectric{ref_idx:1.5}))));
+        //    let mut list = HitableList{ hitables: Vec::new() };
+        //    list.hitables.push(Box::new(Sphere::new(Vec3{x:0.0, y:0.0, z:-1.0}, 0.5, MaterialKind::Lambertian(Lambertian{albedo:Vec3::new(0.1, 0.2, 0.5)}))));
+        //     list.hitables.push(Box::new(Sphere::new(Vec3{x:0.0, y:-100.5, z:-1.0}, 100.0, MaterialKind::Lambertian(Lambertian{albedo:Vec3::new(0.8, 0.8, 0.0)}))));
+        //     list.hitables.push(Box::new(Sphere::new(Vec3{x:1.0, y:0.0, z:-1.0}, 0.5, MaterialKind::Metal(Metal{albedo:Vec3{x:0.8, y:0.6, z:0.2}, fuzz:0.0}))));
+        //     list.hitables.push(Box::new(Sphere::new(Vec3{x:-1.0, y:0.0, z:-1.0}, 0.5, MaterialKind::Dielectric(Dielectric{ref_idx:1.5}))));
+        //     list.hitables.push(Box::new(Sphere::new(Vec3{x:-1.0, y:0.0, z:-1.0}, -0.45, MaterialKind::Dielectric(Dielectric{ref_idx:1.5}))));
+
+            let hitables : Vec<HitableKind> = vec![
+                HitableKind::Sphere(Sphere::new(Vec3::new(0.0, 0.0, -1.0), 0.5, MaterialKind::Lambertian(Lambertian{albedo:Vec3::new(0.1, 0.2, 0.5)}))),
+                HitableKind::Sphere(Sphere::new(Vec3::new(0.0, -100.5, -1.0), 100.0, MaterialKind::Lambertian(Lambertian{albedo:Vec3::new(0.8, 0.8, 0.0)}))),
+                HitableKind::Sphere(Sphere::new(Vec3::new(1.0, 0.0, -1.0), 0.5, MaterialKind::Metal(Metal{albedo:Vec3{x:0.8, y:0.6, z:0.2}, fuzz:0.0}))),
+                HitableKind::Sphere(Sphere::new(Vec3::new(-1.0, 0.0, -1.0), 0.5, MaterialKind::Dielectric(Dielectric{ref_idx:1.5}))),
+                HitableKind::Sphere(Sphere::new(Vec3::new(-1.0, 0.0, -1.0), -0.45, MaterialKind::Dielectric(Dielectric{ref_idx:1.5})))
+            ];
 
             let _rng_scene = rand::thread_rng();
             let mut rng = rand::thread_rng();
@@ -101,7 +113,7 @@ fn main() {
                         let u = (column as f32 + rng.gen::<f32>()) / width as f32;
                         let v = (row as f32 + rng.gen::<f32>()) / height as f32;
                         let ray = camera.get_ray(u, v, &mut rng);
-                        color += trace(&ray, &list, &mut rng, 0);
+                        color += trace(&ray, &hitables, &mut rng, 0);
                     }
                     color /= samples_per_pixel as f32;
                     canvas.set_draw_color(Color::RGB((color.x * 255.99) as u8, (color.y * 255.99) as u8, (color.z * 255.99) as u8));
@@ -127,36 +139,49 @@ fn main() {
     }
 }
 
-fn random_scene(rng: &mut rand::ThreadRng) -> HitableList {
-    let mut list = HitableList{ hitables: Vec::new() };
-    list.hitables.push(Box::new(Sphere::new(Vec3::new(0.0, -1000.0, -1.0), 1000.0, Box::new(Lambertian{albedo:Vec3::new(0.5, 0.5, 0.5)}))));
-    for a in -11..10 {
-        for b in -11..10 {
-            let rand_mat = rng.gen::<f32>();
-            let center = Vec3::new(a as f32 + 0.9 * rng.gen::<f32>(), 0.2, b as f32 + 0.9 * rng.gen::<f32>());
-            if (center - Vec3::new(4.0, 0.2, 0.0)).length() > 0.9 {
-                if rand_mat < 0.8 {
-                    let albedo = Vec3::new(rng.gen::<f32>()*rng.gen::<f32>(), rng.gen::<f32>()*rng.gen::<f32>(), rng.gen::<f32>()*rng.gen::<f32>());
-                    list.hitables.push(Box::new(Sphere::new(center, 0.2, Box::new(Lambertian{albedo:albedo}))));
-                } else if rand_mat < 0.95 {
-                    let albedo = Vec3::new((1.0 + rng.gen::<f32>())*0.5, (1.0 + rng.gen::<f32>())*0.5, (1.0 + rng.gen::<f32>())*0.5);
-                    list.hitables.push(Box::new(Sphere::new(center, 0.2, Box::new(Metal{albedo:albedo, fuzz:rng.gen::<f32>()*0.5}))));
-                } else {
-                    list.hitables.push(Box::new(Sphere::new(center, 0.2, Box::new(Dielectric{ref_idx:1.5}))));
-                }
+// fn random_scene(rng: &mut rand::ThreadRng) -> HitableList {
+//     let mut list = HitableList{ hitables: Vec::new() };
+//     list.hitables.push(Box::new(Sphere::new(Vec3::new(0.0, -1000.0, -1.0), 1000.0, Box::new(Lambertian{albedo:Vec3::new(0.5, 0.5, 0.5)}))));
+//     for a in -11..10 {
+//         for b in -11..10 {
+//             let rand_mat = rng.gen::<f32>();
+//             let center = Vec3::new(a as f32 + 0.9 * rng.gen::<f32>(), 0.2, b as f32 + 0.9 * rng.gen::<f32>());
+//             if (center - Vec3::new(4.0, 0.2, 0.0)).length() > 0.9 {
+//                 if rand_mat < 0.8 {
+//                     let albedo = Vec3::new(rng.gen::<f32>()*rng.gen::<f32>(), rng.gen::<f32>()*rng.gen::<f32>(), rng.gen::<f32>()*rng.gen::<f32>());
+//                     list.hitables.push(Box::new(Sphere::new(center, 0.2, Box::new(Lambertian{albedo:albedo}))));
+//                 } else if rand_mat < 0.95 {
+//                     let albedo = Vec3::new((1.0 + rng.gen::<f32>())*0.5, (1.0 + rng.gen::<f32>())*0.5, (1.0 + rng.gen::<f32>())*0.5);
+//                     list.hitables.push(Box::new(Sphere::new(center, 0.2, Box::new(Metal{albedo:albedo, fuzz:rng.gen::<f32>()*0.5}))));
+//                 } else {
+//                     list.hitables.push(Box::new(Sphere::new(center, 0.2, Box::new(Dielectric{ref_idx:1.5}))));
+//                 }
+//             }
+//         }
+//     }
+
+//     list.hitables.push(Box::new(Sphere::new(Vec3::new(0.0, 1.0, 0.0), 1.0, Box::new(Dielectric{ref_idx:1.5}))));
+//     list.hitables.push(Box::new(Sphere::new(Vec3::new(-4.0, 1.0, 0.0), 1.0, Box::new(Lambertian{albedo:Vec3::new(0.4, 0.2, 0.1)}))));
+//     list.hitables.push(Box::new(Sphere::new(Vec3::new(4.0, 1.0, 0.0), 1.0, Box::new(Metal{albedo:Vec3::new(0.7, 0.6, 0.5), fuzz:0.0}))));
+
+//     list
+// }
+
+fn trace(ray: &Ray, hitables: &Vec<HitableKind>, rng: &mut rand::ThreadRng, depth: i32) -> Vec3 {
+
+    let mut closest_rec : Option<hitable::HitRecord> = None;
+    let mut closest_t = 100.0;
+    for hitable in hitables {
+        match hitable.hit(&ray, 0.001, closest_t) {
+            Some(rec) => {
+                closest_t = rec.t;
+                closest_rec = Some(rec);
             }
+            None => {}
         }
     }
 
-    list.hitables.push(Box::new(Sphere::new(Vec3::new(0.0, 1.0, 0.0), 1.0, Box::new(Dielectric{ref_idx:1.5}))));
-    list.hitables.push(Box::new(Sphere::new(Vec3::new(-4.0, 1.0, 0.0), 1.0, Box::new(Lambertian{albedo:Vec3::new(0.4, 0.2, 0.1)}))));
-    list.hitables.push(Box::new(Sphere::new(Vec3::new(4.0, 1.0, 0.0), 1.0, Box::new(Metal{albedo:Vec3::new(0.7, 0.6, 0.5), fuzz:0.0}))));
-
-    list
-}
-
-fn trace(ray: &Ray, hitables: &HitableList, rng: &mut rand::ThreadRng, depth: i32) -> Vec3 {
-    match hitables.hit(ray, 0.001, 100.0) {
+    match closest_rec {
         Some(rec) => {           
             let (result, ray, attenuation) = rec.material.scatter(ray, &rec, rng);
             if depth < 50 && result == true {

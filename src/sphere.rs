@@ -5,16 +5,18 @@ use crate::hitable::Hitable;
 use crate::hitable::HitRecord;
 
 use crate::material::Material;
+use crate::material::MaterialKind;
 
-pub struct Sphere<'a> {
+
+pub struct Sphere {
     pub center: Vec3,
     pub radius: f32,
-    pub material: Box<Material + 'a>
+    pub material: MaterialKind,
 }
 
-impl<'a> Sphere<'a> {
-    pub fn new(_center: Vec3, _radius: f32, _material: Box<Material + 'a>) -> Sphere {
-        Sphere{center:_center, radius:_radius, material:_material}
+impl Sphere {
+    pub fn new(center: Vec3, radius: f32, material: MaterialKind) -> Sphere {
+        Sphere{center, radius, material}
     }
 }
 
@@ -41,7 +43,7 @@ impl<'a> Sphere<'a> {
     b^2 - 4*a*c < 0 : 0 solutions
 */
 
-impl<'a> Hitable for Sphere<'a> {
+impl Hitable for Sphere {
     fn hit(&self, ray: &Ray, t_min: f32, t_max: f32) -> Option<HitRecord> {
         let oc = ray.origin - self.center;
         let a = ray.direction.dot(ray.direction); 
@@ -52,12 +54,12 @@ impl<'a> Hitable for Sphere<'a> {
             let t = (-b - discriminant.sqrt()) / a;
             if t < t_max && t > t_min {
                 let pos = ray.point_at_parameter(t);
-                return Some(HitRecord::new(t, pos, (pos - self.center) / self.radius, self.material.as_ref()));
+                return Some(HitRecord::new(t, pos, (pos - self.center) / self.radius, &self.material));
             } 
             let t = (-b + discriminant.sqrt()) / a;
             if t < t_max && t > t_min {
                 let pos = ray.point_at_parameter(t);
-                return Some(HitRecord::new(t, pos, (pos - self.center) / self.radius, self.material.as_ref()));
+                return Some(HitRecord::new(t, pos, (pos - self.center) / self.radius, &self.material));
             }          
         }
         return None;

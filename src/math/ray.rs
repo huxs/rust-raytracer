@@ -7,8 +7,8 @@ pub struct Ray {
 
 impl Ray {
 
-    pub fn new(_origin: Vec3, _direction: Vec3) -> Ray {
-        Ray{origin:_origin, direction:_direction}
+    pub fn new(origin: Vec3, direction: Vec3) -> Ray {
+        Ray{origin, direction}
     }
 
     pub fn point_at_parameter(&self, t: f32) -> Vec3 {

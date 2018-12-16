@@ -105,8 +105,19 @@ impl Material for Dielectric {
     }
 }
 
-enum MaterialKind {
+pub enum MaterialKind {
     Lambertian(Lambertian),
     Metal(Metal),
     Dielectric(Dielectric)
+}
+
+impl MaterialKind {
+    pub fn scatter(&self, ray: &Ray, rec: &HitRecord, rng: &mut rand::ThreadRng) -> (bool, Ray, Vec3) {
+        match self {
+            MaterialKind::Lambertian(mat) => { return Lambertian::scatter(mat, ray, rec, rng); },
+            MaterialKind::Metal(mat) => { return Metal::scatter(mat, ray, rec, rng); },
+            MaterialKind::Dielectric(mat) => { return Dielectric::scatter(mat, ray, rec, rng); }
+            _ => { return (true, Ray::new(Vec3::ZERO, Vec3::ZERO), Vec3::ONE); }
+        }
+    }
 }
